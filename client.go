@@ -1942,7 +1942,8 @@ func (f *File) readdir(pattern string) (fi []os.FileInfo, err error) {
 		return nil, &InternalError{fmt.Sprintf("payload size %d exceeds max transact size %d", payloadSize, f.maxTransactSize())}
 	}
 
-	req.CreditCharge, _, err = f.fs.loanCredit(payloadSize)
+	var grantedPayloadSize int
+	req.CreditCharge, grantedPayloadSize, err = f.fs.loanCredit(payloadSize)
 	defer func() {
 		if err != nil {
 			f.fs.chargeCredit(req.CreditCharge)
@@ -1951,6 +1952,16 @@ func (f *File) readdir(pattern string) (fi []os.FileInfo, err error) {
 	if err != nil {
 		return nil, err
 	}
+	// Under credit contention (e.g. many directories being listed
+	// concurrently), loanCredit can grant fewer credits than requested —
+	// declaring the original, larger OutputBufferLength anyway would send
+	// a request whose buffer size doesn't match what its CreditCharge
+	// entitles it to, which a compliant server rejects with
+	// STATUS_INVALID_PARAMETER. Shrinking to what was actually granted
+	// just means more QUERY_DIRECTORY round trips for this listing, not
+	// an incorrect one — the caller (File.Readdir) already loops until
+	// STATUS_NO_MORE_FILES.
+	req.OutputBufferLength = uint32(grantedPayloadSize)
 
 	req.FileId = f.fd
 
