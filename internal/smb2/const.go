@@ -601,6 +601,32 @@ const (
 // SMB2 CHANGE_NOTIFY Request and Response
 //
 
+// Flags for ChangeNotifyRequest (MS-SMB2 2.2.35).
+const (
+	SMB2_WATCH_TREE uint16 = 0x0001
+)
+
+// CompletionFilter bits for ChangeNotifyRequest (MS-FSCC 2.7.1) — which
+// kinds of change to report.
+const (
+	FILE_NOTIFY_CHANGE_FILE_NAME   uint32 = 0x00000001
+	FILE_NOTIFY_CHANGE_DIR_NAME    uint32 = 0x00000002
+	FILE_NOTIFY_CHANGE_ATTRIBUTES  uint32 = 0x00000004
+	FILE_NOTIFY_CHANGE_SIZE        uint32 = 0x00000008
+	FILE_NOTIFY_CHANGE_LAST_WRITE  uint32 = 0x00000010
+	FILE_NOTIFY_CHANGE_LAST_ACCESS uint32 = 0x00000020
+	FILE_NOTIFY_CHANGE_CREATION    uint32 = 0x00000040
+)
+
+// Action values in a FILE_NOTIFY_INFORMATION entry (MS-FSCC 2.7.1).
+const (
+	FILE_ACTION_ADDED            uint32 = 0x00000001
+	FILE_ACTION_REMOVED          uint32 = 0x00000002
+	FILE_ACTION_MODIFIED         uint32 = 0x00000003
+	FILE_ACTION_RENAMED_OLD_NAME uint32 = 0x00000004
+	FILE_ACTION_RENAMED_NEW_NAME uint32 = 0x00000005
+)
+
 //
 
 // ----------------------------------------------------------------------------
