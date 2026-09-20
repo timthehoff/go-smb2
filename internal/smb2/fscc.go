@@ -361,6 +361,34 @@ func (c FileDirectoryInformationDecoder) FileName() string {
 	return utf16le.DecodeToString(c[64 : 64+c.FileNameLength()])
 }
 
+// FileNotifyInformationDecoder decodes one entry of the array a CHANGE_NOTIFY
+// response's buffer holds (MS-FSCC 2.7.1): NextEntryOffset, Action,
+// FileNameLength, FileName — chained the same way FileDirectoryInformation
+// is above, just without the timestamp/size fields. IsInvalid uses uint64
+// arithmetic like FileDirectoryInformationDecoder's does, for the same
+// reason: FileNameLength is server-supplied.
+type FileNotifyInformationDecoder []byte
+
+func (c FileNotifyInformationDecoder) IsInvalid() bool {
+	return uint64(len(c)) < 12+uint64(c.FileNameLength())
+}
+
+func (c FileNotifyInformationDecoder) NextEntryOffset() uint32 {
+	return le.Uint32(c[:4])
+}
+
+func (c FileNotifyInformationDecoder) Action() uint32 {
+	return le.Uint32(c[4:8])
+}
+
+func (c FileNotifyInformationDecoder) FileNameLength() uint32 {
+	return le.Uint32(c[8:12])
+}
+
+func (c FileNotifyInformationDecoder) FileName() string {
+	return utf16le.DecodeToString(c[12 : 12+c.FileNameLength()])
+}
+
 type FileRenameInformationType2Encoder struct {
 	ReplaceIfExists uint8
 	RootDirectory   uint64

@@ -1424,6 +1424,53 @@ func (r QueryDirectoryResponseDecoder) OutputBuffer() []byte {
 // ----------------------------------------------------------------------------
 // SMB2 CHANGE_NOTIFY Response
 //
+// Same 8-byte header shape as QueryDirectoryResponseDecoder above (MS-SMB2
+// 2.2.36): StructureSize, OutputBufferOffset, OutputBufferLength, then a
+// buffer of FILE_NOTIFY_INFORMATION entries (see fscc.go). IsInvalid does
+// the offset+length bounds check in uint64 rather than mirroring
+// QueryDirectoryResponseDecoder's uint32 version above — both offset and
+// length come from the server, and adding two uint32s can wrap.
+
+type ChangeNotifyResponseDecoder []byte
+
+func (r ChangeNotifyResponseDecoder) IsInvalid() bool {
+	if len(r) < 8 {
+		return true
+	}
+
+	if r.StructureSize() != 9 {
+		return true
+	}
+
+	need := uint64(r.OutputBufferOffset()) + uint64(r.OutputBufferLength())
+	if need < 64 || uint64(len(r)) < need-64 {
+		return true
+	}
+
+	return false
+}
+
+func (r ChangeNotifyResponseDecoder) StructureSize() uint16 {
+	return le.Uint16(r[:2])
+}
+
+func (r ChangeNotifyResponseDecoder) OutputBufferOffset() uint16 {
+	return le.Uint16(r[2:4])
+}
+
+func (r ChangeNotifyResponseDecoder) OutputBufferLength() uint32 {
+	return le.Uint32(r[4:8])
+}
+
+func (r ChangeNotifyResponseDecoder) OutputBuffer() []byte {
+	off := r.OutputBufferOffset()
+	if off < 64+8 {
+		return nil
+	}
+	off -= 64
+	len := r.OutputBufferLength()
+	return r[off : uint32(off)+len]
+}
 
 // ----------------------------------------------------------------------------
 // SMB2 QUERY_INFO Response

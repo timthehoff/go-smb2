@@ -1223,6 +1223,39 @@ func (r QueryDirectoryRequestDecoder) OutputBufferLength() uint32 {
 // ----------------------------------------------------------------------------
 // SMB2 CHANGE_NOTIFY Request Packet
 //
+// Previously just the command opcode — this packet was never implemented.
+// Wire format follows MS-SMB2 2.2.35, mirroring QueryDirectoryRequest's
+// layout/encode pattern above.
+
+type ChangeNotifyRequest struct {
+	PacketHeader
+
+	Flags              uint16
+	OutputBufferLength uint32
+	FileId             *FileId
+	CompletionFilter   uint32
+}
+
+func (c *ChangeNotifyRequest) Header() *PacketHeader {
+	return &c.PacketHeader
+}
+
+func (c *ChangeNotifyRequest) Size() int {
+	return 64 + 32
+}
+
+func (c *ChangeNotifyRequest) Encode(pkt []byte) {
+	c.Command = SMB2_CHANGE_NOTIFY
+	c.encodeHeader(pkt)
+
+	req := pkt[64:]
+	le.PutUint16(req[:2], 32) // StructureSize
+	le.PutUint16(req[2:4], c.Flags)
+	le.PutUint32(req[4:8], c.OutputBufferLength)
+	c.FileId.Encode(req[8:24])
+	le.PutUint32(req[24:28], c.CompletionFilter)
+	// req[28:32] Reserved, left zero
+}
 
 // ----------------------------------------------------------------------------
 // SMB2 QUERY_INFO Request Packet
